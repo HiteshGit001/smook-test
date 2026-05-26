@@ -66,5 +66,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: maestro-artifacts-${{ github.event.inputs.app }}
-          path: debug-artifacts/**/*
+          path: debug-artifacts/
           retention-days: 14

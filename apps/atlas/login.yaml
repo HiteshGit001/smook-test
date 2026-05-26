@@ -3,6 +3,8 @@ appId: in.cuonlineedu.lms
 - launchApp:
     clearState: true
 
+- takeScreenshot: 01-app-launched
+
 # Skip the intro banner if visible (optional)
 - tapOn:
     text: 'Skip'
