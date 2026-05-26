@@ -1,0 +1,27 @@
+appId: in.cuonlineedu.lms
+---
+- launchApp:
+    clearState: true
+
+# Skip the intro banner if visible (optional)
+- tapOn:
+    text: 'Skip'
+    optional: true
+
+# Fill in the login credentials
+- tapOn: 'Username'
+- inputText: 'demo_shivansh'
+
+- tapOn: 'Password'
+- inputText: 'demo_shivansh_1'
+- hideKeyboard
+
+# Click on the login / sign-in button
+- tapOn: 'Sign In'
+
+- extendedWaitUntil:
+    visible: 'Select the course you want to continue learning from'
+    timeout: 10000
+
+- tapOn:
+    point: '25%,42%'
