@@ -61,14 +61,18 @@ jobs:
 
             mkdir -p debug-artifacts
 
-            # Run maestro; if it fails, capture a screenshot of the screen
-            # state at the moment of failure before exiting.
-            maestro test --debug-output debug-artifacts apps/${{ github.event.inputs.app }}/ || {
-              echo "Maestro test failed — capturing screenshot of current screen"
-              adb exec-out screencap -p > debug-artifacts/at-failure.png
-              ls -lh debug-artifacts/
-              exit 1
-            }
+            # Run maestro, then always capture a screenshot of the final
+            # screen state — whether the test passed or failed.
+            set +e
+            maestro test --debug-output debug-artifacts apps/${{ github.event.inputs.app }}/
+            TEST_EXIT=$?
+            set -e
+
+            echo "Maestro exit code: $TEST_EXIT — capturing final screen"
+            adb exec-out screencap -p > debug-artifacts/final-screen.png
+            ls -lh debug-artifacts/
+
+            exit $TEST_EXIT
 
       - name: Upload Maestro test artifacts
         if: always()
