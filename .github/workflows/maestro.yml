@@ -59,6 +59,14 @@ jobs:
 
             adb install app.apk
 
+            mkdir -p debug-artifacts
+
+            # Launch the app and capture a screenshot to verify it actually opens
+            adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
+            sleep 8
+            adb exec-out screencap -p > debug-artifacts/00-after-launch.png
+            ls -lh debug-artifacts/
+
             maestro test --debug-output debug-artifacts apps/${{ github.event.inputs.app }}/
 
       - name: Upload Maestro test artifacts
