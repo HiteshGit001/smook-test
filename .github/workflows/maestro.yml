@@ -61,15 +61,19 @@ jobs:
 
             mkdir -p debug-artifacts
 
-            # Run maestro, then always capture a screenshot of the final
-            # screen state — whether the test passed or failed.
-            set +e
-            maestro test --debug-output debug-artifacts apps/${{ github.event.inputs.app }}/
-            TEST_EXIT=$?
-            set -e
+            # Pre-test screenshot: launch the app, wait, and capture screen.
+            # This is the reliable screenshot — guaranteed to be on disk
+            # before maestro runs.
+            adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
+            sleep 8
+            adb exec-out screencap -p > debug-artifacts/01-pre-test.png
 
-            echo "Maestro exit code: $TEST_EXIT — capturing final screen"
-            adb exec-out screencap -p > debug-artifacts/final-screen.png
+            # Run maestro
+            TEST_EXIT=0
+            maestro test --debug-output debug-artifacts apps/${{ github.event.inputs.app }}/ || TEST_EXIT=$?
+
+            # Post-test screenshot: best-effort capture of the final state.
+            adb exec-out screencap -p > debug-artifacts/02-post-test.png || true
             ls -lh debug-artifacts/
 
             exit $TEST_EXIT
