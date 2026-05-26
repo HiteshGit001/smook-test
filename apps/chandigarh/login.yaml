@@ -3,16 +3,18 @@ appId: in.cuonlineedu.lms
 - launchApp:
     clearState: true
 
-# Skip the intro banner if visible (optional)
-- tapOn:
-    text: 'Skip'
-    optional: true
-
-# Wait until the login screen is actually visible.
-# Match common labels for the username field.
+# Wait for onboarding screen, then skip it
 - extendedWaitUntil:
-    visible:
-      text: 'Username'
+    visible: 'Skip'
+    timeout: 10000
+- tapOn: 'Skip'
+
+# Capture the login screen so we can see what field labels are actually used
+- takeScreenshot: 02-login-screen
+
+# Wait until the login screen is actually visible
+- extendedWaitUntil:
+    visible: 'Username'
     timeout: 20000
 
 # Fill in the login credentials
