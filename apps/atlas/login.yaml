@@ -8,6 +8,11 @@ appId: in.cuonlineedu.lms
     text: 'Skip'
     optional: true
 
+# Wait until the login screen is actually visible
+- extendedWaitUntil:
+    visible: 'Username'
+    timeout: 15000
+
 # Fill in the login credentials
 - tapOn: 'Username'
 - inputText: 'demo_shivansh'
