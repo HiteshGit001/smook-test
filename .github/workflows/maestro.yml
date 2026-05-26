@@ -53,12 +53,14 @@ jobs:
             adb devices
             wget -O app.apk "https://ueducation-my.sharepoint.com/:u:/g/personal/hitesh_nanjappa_upgrad_com/IQDSDNDZgOu9TKlfCiERmcA0ATdWfxhNHIs_RsPIq2GdS_s?download=1"
             adb install app.apk
-            maestro test apps/${{ github.event.inputs.app }}/
+            maestro test \
+              --debug-output debug-artifacts \
+              apps/${{ github.event.inputs.app }}/
       - name: Upload Maestro test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: maestro-artifacts-${{ github.event.inputs.app }}
           path: |
-            ~/.maestro/tests/**/*
+            debug-artifacts/**/*
           retention-days: 14
