@@ -10,6 +10,10 @@ on:
         options:
           - atlas
           - chandigarh
+      apk_url:
+        description: 'Direct download URL for the APK'
+        required: true
+        type: string
 
 jobs:
   maestro-test:
@@ -52,7 +56,7 @@ jobs:
           script: |
             adb devices
 
-            wget -O app.apk "https://ueducation-my.sharepoint.com/:u:/g/personal/hitesh_nanjappa_upgrad_com/IQDSDNDZgOu9TKlfCiERmcA0ATdWfxhNHIs_RsPIq2GdS_s?download=1"
+            wget -O app.apk "${{ github.event.inputs.apk_url }}"
 
             ls -lh app.apk
             file app.apk
