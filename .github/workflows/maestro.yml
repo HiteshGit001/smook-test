@@ -61,13 +61,14 @@ jobs:
 
             mkdir -p debug-artifacts
 
-            # Launch the app and capture a screenshot to verify it actually opens
-            adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
-            sleep 8
-            adb exec-out screencap -p > debug-artifacts/00-after-launch.png
-            ls -lh debug-artifacts/
-
-            maestro test --debug-output debug-artifacts apps/${{ github.event.inputs.app }}/
+            # Run maestro; if it fails, capture a screenshot of the screen
+            # state at the moment of failure before exiting.
+            maestro test --debug-output debug-artifacts apps/${{ github.event.inputs.app }}/ || {
+              echo "Maestro test failed — capturing screenshot of current screen"
+              adb exec-out screencap -p > debug-artifacts/at-failure.png
+              ls -lh debug-artifacts/
+              exit 1
+            }
 
       - name: Upload Maestro test artifacts
         if: always()

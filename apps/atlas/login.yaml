@@ -3,23 +3,25 @@ appId: in.cuonlineedu.lms
 - launchApp:
     clearState: true
 
-- takeScreenshot: 01-app-launched
-
 # Skip the intro banner if visible (optional)
 - tapOn:
     text: 'Skip'
     optional: true
 
-# Wait until the login screen is actually visible
+# Wait until the login screen is actually visible.
+# Match common labels for the username field.
 - extendedWaitUntil:
-    visible: 'Username'
-    timeout: 15000
+    visible:
+      text: 'Username|Email|Mobile|User ID|Phone|Login'
+    timeout: 20000
 
 # Fill in the login credentials
-- tapOn: 'Username'
+- tapOn:
+    text: 'Username|Email|Mobile|User ID|Phone|Login'
 - inputText: 'demo_shivansh'
 
-- tapOn: 'Password'
+- tapOn:
+    text: 'Password'
 - inputText: 'demo_shivansh_1'
 - hideKeyboard
 
