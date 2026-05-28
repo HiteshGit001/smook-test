@@ -108,9 +108,7 @@ jobs:
             adb exec-out screencap -p > debug-artifacts/pre-test.png || true
 
             echo "Running Maestro..."
-            maestro test \
-              --debug-output debug-artifacts \
-              apps/$APP_NAME/
+            maestro test --debug-output debug-artifacts apps/$APP_NAME/
 
       #########################################################
       # UPLOAD ARTIFACTS
