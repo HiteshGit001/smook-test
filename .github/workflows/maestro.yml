@@ -86,8 +86,8 @@ jobs:
           # APP_NAME: ${{ github.event.inputs.app }}
           # APK_URL: ${{ github.event.inputs.apk_url }}
         with:
-          api-level: 30
-          target: google_apis
+          api-level: 33
+          target: google_apis_playstore
           arch: x86_64
           profile: pixel_6
           disable-animations: true
