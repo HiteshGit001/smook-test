@@ -1,3 +1,4 @@
+```yaml
 name: Maestro Tests
 
 on:
@@ -10,6 +11,7 @@ on:
     #     options:
     #       - atlas
     #       - chandigarh
+    #
     #   apk_url:
     #     description: 'Direct download URL for the APK'
     #     required: true
@@ -19,92 +21,260 @@ jobs:
   maestro-test:
     name: Run Maestro Tests for ${{ github.event.inputs.app }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
+      #########################################################
+      # CHECKOUT
+      #########################################################
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      #########################################################
+      # JAVA
+      #########################################################
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: 17
+
+      #########################################################
+      # MAESTRO
+      #########################################################
 
       - name: Install Maestro CLI
         run: |
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          # Install Maestro
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+
+          # Add Maestro to PATH
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+          # Optional debug logs
+          # ls -la $HOME/.maestro/bin
+          # maestro --version
 
       - name: Verify Maestro installation
         run: maestro --version
 
+      #########################################################
+      # LINUX DEPENDENCIES
+      #########################################################
+
       - name: Install emulator dependencies
-        run: sudo apt-get install -y libpulse0
+        run: |
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            wget \
+            curl \
+            unzip \
+            libpulse0 \
+            libglu1-mesa \
+            qemu-kvm \
+            bridge-utils \
+            libvirt-daemon-system \
+            libvirt-clients
+
+      #########################################################
+      # ENABLE KVM
+      #########################################################
 
       - name: Enable KVM
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
+          sudo chmod 666 /dev/kvm || true
+
+      #########################################################
+      # CREATE TEST SCRIPT
+      #########################################################
 
       - name: Create test script
         run: |
           cat > run_tests.sh << 'EOF'
           #!/bin/bash
+
           set -e
 
           mkdir -p debug-artifacts
 
-          # Always take a screenshot on exit (pass or fail)
+          #########################################################
+          # ALWAYS CAPTURE SCREENSHOT ON EXIT
+          #########################################################
+
           on_exit() {
+            echo "Capturing final screenshot..."
+
             adb exec-out screencap -p > debug-artifacts/on-exit.png || true
-            ls -lh debug-artifacts/
+
+            echo "Artifacts:"
+            ls -lh debug-artifacts/ || true
           }
+
           trap on_exit EXIT
 
+          #########################################################
+          # ADB DEVICES
+          #########################################################
+
+          echo "ADB devices:"
           adb devices
 
-          wget -O app.apk "$APK_URL"
+          #########################################################
+          # WAIT FOR EMULATOR
+          #########################################################
+
+          echo "Waiting for emulator..."
+
+          adb wait-for-device
+
+          BOOT_STATUS=""
+
+          until [[ "$BOOT_STATUS" == "1" ]]; do
+            BOOT_STATUS=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+
+            echo "Boot status: $BOOT_STATUS"
+
+            sleep 5
+          done
+
+          echo "Emulator boot completed"
+
+          #########################################################
+          # DISABLE ANIMATIONS
+          #########################################################
+
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+
+          #########################################################
+          # DOWNLOAD APK
+          #########################################################
+
+          echo "Downloading APK..."
+
+          wget \
+            --tries=3 \
+            --timeout=60 \
+            -O app.apk \
+            "$APK_URL"
+
+          #########################################################
+          # APK INFO
+          #########################################################
+
+          echo "APK details:"
+
           ls -lh app.apk
+
           file app.apk
 
-          adb install app.apk
+          #########################################################
+          # INSTALL APK
+          #########################################################
 
-          # Pre-test screenshot
-          adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
+          echo "Installing APK..."
+
+          adb install -r app.apk
+
+          #########################################################
+          # LAUNCH APP
+          #########################################################
+
+          echo "Launching app..."
+
+          adb shell monkey \
+            -p in.cuonlineedu.lms \
+            -c android.intent.category.LAUNCHER 1
+
           sleep 15
-          adb exec-out screencap -p > debug-artifacts/01-pre-test.png
 
-          # Run maestro — exits with maestro's exit code if it fails
-          maestro test --debug-output debug-artifacts apps/$APP_NAME/
+          #########################################################
+          # PRE TEST SCREENSHOT
+          #########################################################
+
+          adb exec-out screencap -p > debug-artifacts/pre-test.png || true
+
+          #########################################################
+          # RUN MAESTRO
+          #########################################################
+
+          echo "Running Maestro tests..."
+
+          maestro test \
+            --debug-output debug-artifacts \
+            apps/$APP_NAME/
+
+          #########################################################
+          # FINAL SCREENSHOT
+          #########################################################
+
+          adb exec-out screencap -p > debug-artifacts/final.png || true
+
           EOF
+
           chmod +x run_tests.sh
+
+      #########################################################
+      # RUN EMULATOR
+      #########################################################
 
       - name: Run Maestro tests
         uses: reactivecircus/android-emulator-runner@v2
+
         env:
           APP_NAME: chandigarh
           APK_URL: https://github.com/HiteshGit001/smook-test/releases/download/ci-build-1318/app-chandigarh-release.apk
+
           # APP_NAME: ${{ github.event.inputs.app }}
           # APK_URL: ${{ github.event.inputs.apk_url }}
+
         with:
-          api-level: 30
-          target: google_apis_playstore
+          api-level: 31
+
+          # MUCH FASTER THAN PLAYSTORE IMAGE
+          target: google_apis
+
           arch: x86_64
+
           profile: pixel_6
+
           disable-animations: true
-          ram-size: 6144M
-          heap-size: 2048M
-          disk-size: 16384M
-          cores: 2
-          emulator-options: -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -camera-back none -camera-front none
-          script: bash run_tests.sh
+
+          cores: 4
+
+          ram-size: 4096M
+          heap-size: 1024M
+          disk-size: 8192M
+
+          emulator-options: >
+            -no-window
+            -gpu swiftshader_indirect
+            -noaudio
+            -no-boot-anim
+            -camera-back none
+            -camera-front none
+            -memory 4096
+
+          script: |
+            bash run_tests.sh
+
+      #########################################################
+      # UPLOAD ARTIFACTS
+      #########################################################
 
       - name: Upload Maestro test artifacts
         if: always()
+
         uses: actions/upload-artifact@v4
+
         with:
           name: maestro-artifacts-chandigarh
+
           path: debug-artifacts/
+
           retention-days: 14
+```
