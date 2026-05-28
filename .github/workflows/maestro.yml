@@ -19,7 +19,7 @@ on:
 jobs:
   maestro-test:
     name: Run Maestro Tests for ${{ github.event.inputs.app }}
-    runs-on: ubuntu-latest
+    runs-on: macos-14
     timeout-minutes: 45
 
     steps:
@@ -53,14 +53,6 @@ jobs:
         run: maestro --version
 
       #########################################################
-      # ENABLE KVM
-      #########################################################
-
-      - name: Enable KVM
-        run: |
-          sudo chmod 666 /dev/kvm || true
-
-      #########################################################
       # RUN TESTS
       #########################################################
 
@@ -77,9 +69,10 @@ jobs:
         with:
           api-level: 31
           target: google_apis
-          arch: x86_64
+          arch: arm64-v8a
           profile: pixel_6
           disable-animations: true
+          emulator-options: -no-window -gpu host -noaudio -no-boot-anim -camera-back none -camera-front none
 
           script: |
             mkdir -p debug-artifacts
