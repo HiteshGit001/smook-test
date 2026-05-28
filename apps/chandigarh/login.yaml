@@ -8,6 +8,9 @@ appId: in.cuonlineedu.lms
     text: 'Skip'
     optional: true
 
+# Capture login screen so we can see the actual field labels
+- takeScreenshot: 02-after-skip
+
 # Wait until the login screen is actually visible.
 # Match common labels for the username field.
 - extendedWaitUntil:
