@@ -70,7 +70,7 @@ jobs:
 
           # Pre-test screenshot
           adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
-          sleep 10
+          sleep 15
           adb exec-out screencap -p > debug-artifacts/01-pre-test.png
 
           # Run maestro — exits with maestro's exit code if it fails
@@ -87,13 +87,15 @@ jobs:
           # APK_URL: ${{ github.event.inputs.apk_url }}
         with:
           api-level: 30
-          target: google_apis
+          target: google_apis_playstore
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          ram-size: 4096M
-          heap-size: 1024M
-          disk-size: 8192M
+          ram-size: 6144M
+          heap-size: 2048M
+          disk-size: 16384M
+          cores: 2
+          emulator-options: -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -camera-back none -camera-front none
           script: bash run_tests.sh
 
       - name: Upload Maestro test artifacts
