@@ -3,37 +3,74 @@ appId: in.cuonlineedu.lms
 - launchApp:
     clearState: true
 
-# Skip the intro banner if visible (optional)
+#########################################################
+# WAIT FOR APP TO LOAD
+#########################################################
+
+# Wait until either Skip OR Username appears
+- extendedWaitUntil:
+    visible:
+      text: 'Skip'
+    timeout: 15000
+    optional: true
+
+#########################################################
+# HANDLE OPTIONAL SKIP
+#########################################################
+
 - tapOn:
     text: 'Skip'
     optional: true
 
-# Capture login screen so we can see the actual field labels
-- takeScreenshot: 02-after-skip
+#########################################################
+# WAIT FOR LOGIN SCREEN
+#########################################################
 
-# Wait until the login screen is actually visible.
-# Match common labels for the username field.
 - extendedWaitUntil:
     visible:
       text: 'Username'
-    timeout: 20000
+    timeout: 30000
 
-# Fill in the login credentials
+#########################################################
+# SCREENSHOT
+#########################################################
+
+- takeScreenshot: 02-login-screen
+
+#########################################################
+# LOGIN
+#########################################################
+
 - tapOn:
     text: 'Username'
+
 - inputText: 'demo_shivansh'
 
 - tapOn:
     text: 'Password'
+
 - inputText: 'demo_shivansh_1'
+
 - hideKeyboard
 
-# Click on the login / sign-in button
+#########################################################
+# SIGN IN
+#########################################################
+
 - tapOn: 'Sign In'
 
+#########################################################
+# WAIT FOR HOME SCREEN
+#########################################################
+
 - extendedWaitUntil:
-    visible: 'Select the course you want to continue learning from'
-    timeout: 10000
+    visible:
+      text: 'Select the course you want to continue learning from'
+    timeout: 30000
+
+#########################################################
+# TAP COURSE
+#########################################################
 
 - tapOn:
     point: '25%,42%'

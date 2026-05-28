@@ -46,37 +46,11 @@ jobs:
 
       - name: Install Maestro CLI
         run: |
-          # Install Maestro
           curl -Ls "https://get.maestro.mobile.dev" | bash
-
-          # Add Maestro to PATH
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
-
-          # Optional debug logs
-          # ls -la $HOME/.maestro/bin
-          # maestro --version
 
       - name: Verify Maestro installation
         run: maestro --version
-
-      #########################################################
-      # LINUX DEPENDENCIES
-      #########################################################
-
-      - name: Install emulator dependencies
-        run: |
-          sudo apt-get update
-
-          sudo apt-get install -y \
-            wget \
-            curl \
-            unzip \
-            libpulse0 \
-            libglu1-mesa \
-            qemu-kvm \
-            bridge-utils \
-            libvirt-daemon-system \
-            libvirt-clients
 
       #########################################################
       # ENABLE KVM
@@ -87,138 +61,7 @@ jobs:
           sudo chmod 666 /dev/kvm || true
 
       #########################################################
-      # CREATE TEST SCRIPT
-      #########################################################
-
-      - name: Create test script
-        run: |
-          cat > run_tests.sh << 'EOF'
-          #!/bin/bash
-
-          set -e
-
-          mkdir -p debug-artifacts
-
-          #########################################################
-          # ALWAYS CAPTURE SCREENSHOT ON EXIT
-          #########################################################
-
-          on_exit() {
-            echo "Capturing final screenshot..."
-
-            adb exec-out screencap -p > debug-artifacts/on-exit.png || true
-
-            echo "Artifacts:"
-            ls -lh debug-artifacts/ || true
-          }
-
-          trap on_exit EXIT
-
-          #########################################################
-          # ADB DEVICES
-          #########################################################
-
-          echo "ADB devices:"
-          adb devices
-
-          #########################################################
-          # WAIT FOR EMULATOR
-          #########################################################
-
-          echo "Waiting for emulator..."
-
-          adb wait-for-device
-
-          BOOT_STATUS=""
-
-          until [[ "$BOOT_STATUS" == "1" ]]; do
-            BOOT_STATUS=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-
-            echo "Boot status: $BOOT_STATUS"
-
-            sleep 5
-          done
-
-          echo "Emulator boot completed"
-
-          #########################################################
-          # DISABLE ANIMATIONS
-          #########################################################
-
-          adb shell settings put global window_animation_scale 0
-          adb shell settings put global transition_animation_scale 0
-          adb shell settings put global animator_duration_scale 0
-
-          #########################################################
-          # DOWNLOAD APK
-          #########################################################
-
-          echo "Downloading APK..."
-
-          wget \
-            --tries=3 \
-            --timeout=60 \
-            -O app.apk \
-            "$APK_URL"
-
-          #########################################################
-          # APK INFO
-          #########################################################
-
-          echo "APK details:"
-
-          ls -lh app.apk
-
-          file app.apk
-
-          #########################################################
-          # INSTALL APK
-          #########################################################
-
-          echo "Installing APK..."
-
-          adb install -r app.apk
-
-          #########################################################
-          # LAUNCH APP
-          #########################################################
-
-          echo "Launching app..."
-
-          adb shell monkey \
-            -p in.cuonlineedu.lms \
-            -c android.intent.category.LAUNCHER 1
-
-          sleep 15
-
-          #########################################################
-          # PRE TEST SCREENSHOT
-          #########################################################
-
-          adb exec-out screencap -p > debug-artifacts/pre-test.png || true
-
-          #########################################################
-          # RUN MAESTRO
-          #########################################################
-
-          echo "Running Maestro tests..."
-
-          maestro test \
-            --debug-output debug-artifacts \
-            apps/$APP_NAME/
-
-          #########################################################
-          # FINAL SCREENSHOT
-          #########################################################
-
-          adb exec-out screencap -p > debug-artifacts/final.png || true
-
-          EOF
-
-          chmod +x run_tests.sh
-
-      #########################################################
-      # RUN EMULATOR
+      # RUN TESTS
       #########################################################
 
       - name: Run Maestro tests
@@ -233,32 +76,44 @@ jobs:
 
         with:
           api-level: 31
-
-          # MUCH FASTER THAN PLAYSTORE IMAGE
           target: google_apis
-
           arch: x86_64
-
           profile: pixel_6
-
           disable-animations: true
 
-          cores: 2
-
-          ram-size: 4096M
-          heap-size: 1024M
-          disk-size: 8192M
-
-          emulator-options: >
-            -no-window
-            -gpu swiftshader_indirect
-            -noaudio
-            -no-boot-anim
-            -camera-back none
-            -camera-front none
-
           script: |
-            bash run_tests.sh
+            mkdir -p debug-artifacts
+
+            echo "ADB devices:"
+            adb devices
+
+            echo "Waiting for emulator..."
+            adb wait-for-device
+
+            echo "Downloading APK..."
+            wget -O app.apk "$APK_URL"
+
+            echo "APK details:"
+            ls -lh app.apk
+            file app.apk
+
+            echo "Installing APK..."
+            adb install -r app.apk
+
+            echo "Launching app..."
+            adb shell monkey \
+              -p in.cuonlineedu.lms \
+              -c android.intent.category.LAUNCHER 1
+
+            sleep 10
+
+            echo "Taking pre-test screenshot..."
+            adb exec-out screencap -p > debug-artifacts/pre-test.png || true
+
+            echo "Running Maestro..."
+            maestro test \
+              --debug-output debug-artifacts \
+              apps/$APP_NAME/
 
       #########################################################
       # UPLOAD ARTIFACTS
@@ -271,7 +126,5 @@ jobs:
 
         with:
           name: maestro-artifacts-chandigarh
-
           path: debug-artifacts/
-
           retention-days: 14
