@@ -53,34 +53,36 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
+          ram-size: 4096M
+          heap-size: 1024M
+          disk-size: 8192M
           script: |
+            set -e
+
+            # Always capture a screenshot and list artifacts on exit,
+            # whether the test passes or fails. Exit code is preserved.
+            mkdir -p debug-artifacts
+            on_exit() {
+              adb exec-out screencap -p > debug-artifacts/on-exit.png || true
+              ls -lh debug-artifacts/
+            }
+            trap on_exit EXIT
+
             adb devices
 
             wget -O app.apk "${{ github.event.inputs.apk_url }}"
-
             ls -lh app.apk
             file app.apk
 
             adb install app.apk
 
-            mkdir -p debug-artifacts
-
-            # Pre-test screenshot: launch the app, wait, and capture screen.
-            # This is the reliable screenshot — guaranteed to be on disk
-            # before maestro runs.
+            # Pre-test screenshot
             adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
-            sleep 8
+            sleep 10
             adb exec-out screencap -p > debug-artifacts/01-pre-test.png
 
-            # Run maestro
-            TEST_EXIT=0
-            maestro test --debug-output debug-artifacts apps/${{ github.event.inputs.app }}/ || TEST_EXIT=$?
-
-            # Post-test screenshot: best-effort capture of the final state.
-            adb exec-out screencap -p > debug-artifacts/02-post-test.png || true
-            ls -lh debug-artifacts/
-
-            exit $TEST_EXIT
+            # Run maestro — script exits here with maestro's exit code if it fails
+            maestro test --debug-output debug-artifacts apps/${{ github.event.inputs.app }}/
 
       - name: Upload Maestro test artifacts
         if: always()
