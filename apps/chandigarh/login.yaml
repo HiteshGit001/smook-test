@@ -25,11 +25,11 @@ appId: in.cuonlineedu.lms
 #########################################################
 # WAIT FOR LOGIN SCREEN
 #########################################################
-
+- takeScreenshot: 02-gggeee
 - extendedWaitUntil:
     visible:
       text: 'Username'
-    timeout: 30000
+    timeout: 150000
 
 #########################################################
 # SCREENSHOT
