@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 45
 
     steps:
+
       #########################################################
       # CHECKOUT
       #########################################################
@@ -53,7 +54,145 @@ jobs:
         run: maestro --version
 
       #########################################################
-      # RUN TESTS
+      # CREATE TEST SCRIPT
+      #########################################################
+
+      - name: Create test script
+        run: |
+          cat > run_tests.sh << 'EOF'
+          #!/bin/bash
+
+          set -e
+
+          mkdir -p debug-artifacts
+
+          #########################################################
+          # ALWAYS TAKE SCREENSHOT ON EXIT
+          #########################################################
+
+          on_exit() {
+            echo "Taking exit screenshot..."
+
+            adb exec-out screencap -p > debug-artifacts/on-exit.png || true
+
+            echo "Artifacts:"
+            ls -lh debug-artifacts/ || true
+          }
+
+          trap on_exit EXIT
+
+          #########################################################
+          # WAIT FOR EMULATOR
+          #########################################################
+
+          echo "Waiting for emulator..."
+
+          adb wait-for-device
+
+          BOOT_STATUS=""
+
+          until [[ "$BOOT_STATUS" == "1" ]]; do
+            BOOT_STATUS=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+
+            echo "Boot status: $BOOT_STATUS"
+
+            sleep 5
+          done
+
+          echo "Emulator booted successfully"
+
+          #########################################################
+          # DISABLE ANIMATIONS
+          #########################################################
+
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+
+          #########################################################
+          # SHOW DEVICES
+          #########################################################
+
+          adb devices
+
+          #########################################################
+          # DOWNLOAD APK
+          #########################################################
+
+          echo "Downloading APK..."
+
+          curl -L "$APK_URL" -o app.apk
+
+          ls -lh app.apk
+
+          file app.apk
+
+          #########################################################
+          # INSTALL APK
+          #########################################################
+
+          echo "Installing APK..."
+
+          adb install -r app.apk
+
+          #########################################################
+          # CLEAR LOGCAT
+          #########################################################
+
+          adb logcat -c
+
+          #########################################################
+          # START LOGCAT
+          #########################################################
+
+          adb logcat *:E > debug-artifacts/logcat.txt &
+
+          LOGCAT_PID=$!
+
+          #########################################################
+          # LAUNCH APP
+          #########################################################
+
+          echo "Launching app..."
+
+          adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
+
+          sleep 20
+
+          #########################################################
+          # SCREENSHOT
+          #########################################################
+
+          echo "Taking pre-test screenshot..."
+
+          adb exec-out screencap -p > debug-artifacts/pre-test.png || true
+
+          #########################################################
+          # RUN MAESTRO
+          #########################################################
+
+          echo "Running Maestro..."
+
+          maestro test --debug-output debug-artifacts "apps/$APP_NAME/"
+
+          #########################################################
+          # STOP LOGCAT
+          #########################################################
+
+          kill $LOGCAT_PID || true
+
+          #########################################################
+          # FINAL SCREENSHOT
+          #########################################################
+
+          adb exec-out screencap -p > debug-artifacts/final.png || true
+
+          EOF
+
+          chmod +x run_tests.sh
+
+      #########################################################
+      # RUN ANDROID EMULATOR
       #########################################################
 
       - name: Run Maestro tests
@@ -68,40 +207,25 @@ jobs:
 
         with:
           api-level: 31
+
           target: google_apis
+
           arch: arm64-v8a
+
           profile: pixel_6
+
           disable-animations: true
-          emulator-options: -no-window -gpu host -noaudio -no-boot-anim -camera-back none -camera-front none
+
+          emulator-options: >
+            -no-window
+            -gpu host
+            -noaudio
+            -no-boot-anim
+            -camera-back none
+            -camera-front none
 
           script: |
-            mkdir -p debug-artifacts
-
-            echo "ADB devices:"
-            adb devices
-
-            echo "Waiting for emulator..."
-            adb wait-for-device
-
-            echo "Downloading APK..."
-            wget -O app.apk "$APK_URL"
-
-            echo "APK details:"
-            ls -lh app.apk
-            file app.apk
-
-            echo "Installing APK..."
-            adb install -r app.apk
-
-            echo "Launching app..."
-            adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
-            sleep 10
-
-            echo "Taking pre-test screenshot..."
-            adb exec-out screencap -p > debug-artifacts/pre-test.png || true
-
-            echo "Running Maestro..."
-            maestro test --debug-output debug-artifacts apps/$APP_NAME/
+            bash run_tests.sh
 
       #########################################################
       # UPLOAD ARTIFACTS
@@ -114,5 +238,7 @@ jobs:
 
         with:
           name: maestro-artifacts-chandigarh
+
           path: debug-artifacts/
+
           retention-days: 14
