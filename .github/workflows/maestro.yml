@@ -1,4 +1,4 @@
-- name: Run Maestro tests
+- name: Maestro Tests
   uses: reactivecircus/android-emulator-runner@v2
 
   env:
