@@ -2,18 +2,18 @@ name: Maestro Tests
 
 on:
   workflow_dispatch:
-    inputs:
-      app:
-        description: 'App to test (e.g. atlas, chandigarh)'
-        required: true
-        type: choice
-        options:
-          - atlas
-          - chandigarh
-      apk_url:
-        description: 'Direct download URL for the APK'
-        required: true
-        type: string
+    # inputs:
+    #   app:
+    #     description: 'App to test (e.g. atlas, chandigarh)'
+    #     required: true
+    #     type: choice
+    #     options:
+    #       - atlas
+    #       - chandigarh
+    #   apk_url:
+    #     description: 'Direct download URL for the APK'
+    #     required: true
+    #     type: string
 
 jobs:
   maestro-test:
@@ -45,8 +45,46 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Create test script
+        run: |
+          cat > run_tests.sh << 'EOF'
+          #!/bin/bash
+          set -e
+
+          mkdir -p debug-artifacts
+
+          # Always take a screenshot on exit (pass or fail)
+          on_exit() {
+            adb exec-out screencap -p > debug-artifacts/on-exit.png || true
+            ls -lh debug-artifacts/
+          }
+          trap on_exit EXIT
+
+          adb devices
+
+          wget -O app.apk "$APK_URL"
+          ls -lh app.apk
+          file app.apk
+
+          adb install app.apk
+
+          # Pre-test screenshot
+          adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
+          sleep 10
+          adb exec-out screencap -p > debug-artifacts/01-pre-test.png
+
+          # Run maestro — exits with maestro's exit code if it fails
+          maestro test --debug-output debug-artifacts apps/$APP_NAME/
+          EOF
+          chmod +x run_tests.sh
+
       - name: Run Maestro tests
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          APP_NAME: chandigarh
+          APK_URL: https://github.com/HiteshGit001/smook-test/releases/download/ci-build-1318/app-chandigarh-release.apk
+          # APP_NAME: ${{ github.event.inputs.app }}
+          # APK_URL: ${{ github.event.inputs.apk_url }}
         with:
           api-level: 30
           target: google_apis
@@ -56,38 +94,12 @@ jobs:
           ram-size: 4096M
           heap-size: 1024M
           disk-size: 8192M
-          script: |
-            set -e
-
-            # Always capture a screenshot and list artifacts on exit,
-            # whether the test passes or fails. Exit code is preserved.
-            mkdir -p debug-artifacts
-            on_exit() {
-              adb exec-out screencap -p > debug-artifacts/on-exit.png || true
-              ls -lh debug-artifacts/
-            }
-            trap on_exit EXIT
-
-            adb devices
-
-            wget -O app.apk "${{ github.event.inputs.apk_url }}"
-            ls -lh app.apk
-            file app.apk
-
-            adb install app.apk
-
-            # Pre-test screenshot
-            adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
-            sleep 10
-            adb exec-out screencap -p > debug-artifacts/01-pre-test.png
-
-            # Run maestro — script exits here with maestro's exit code if it fails
-            maestro test --debug-output debug-artifacts apps/${{ github.event.inputs.app }}/
+          script: bash run_tests.sh
 
       - name: Upload Maestro test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: maestro-artifacts-${{ github.event.inputs.app }}
+          name: maestro-artifacts-chandigarh
           path: debug-artifacts/
           retention-days: 14
