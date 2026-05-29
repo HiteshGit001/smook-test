@@ -159,7 +159,15 @@ jobs:
           echo "CHECKING FOR CRASH"
           echo "====================================="
 
-          adb logcat -d | grep -i "FATAL EXCEPTION" && exit 1 || true
+          if adb logcat -d | grep -i "FATAL EXCEPTION"; then
+            echo "====================================="
+            echo "FULL CRASH LOG"
+            echo "====================================="
+
+            adb logcat -d | tail -200
+
+            exit 1
+          fi
 
           echo "====================================="
           echo "RUNNING MAESTRO"
