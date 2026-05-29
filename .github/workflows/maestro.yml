@@ -190,7 +190,7 @@ jobs:
 
         env:
           APP_NAME: chandigarh
-          APK_URL: https://ueducation-my.sharepoint.com/:u:/g/personal/hitesh_nanjappa_upgrad_com/IQDSDNDZgOu9TKlfCiERmcA0ATdWfxhNHIs_RsPIq2GdS_s?e=jlSCKM
+          APK_URL: https://firebasestorage.googleapis.com/v0/b/pedagogy-mobile.firebasestorage.app/o/apkss%2Fapp-Chandigarh-release.apk?alt=media&token=67620560-2765-48fc-9657-08498392dc4d
 
         with:
           api-level: 30
