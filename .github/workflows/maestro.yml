@@ -190,7 +190,7 @@ jobs:
 
         env:
           APP_NAME: chandigarh
-          APK_URL: https://ueducation-my.sharepoint.com/:u:/g/personal/hitesh_nanjappa_upgrad_com/IQAvBfWMRE8bR5AAzFMsLbLBAViV6f-Fj1zGrrLZET-AL88?e=U8EAxX
+          APK_URL: https://ueducation-my.sharepoint.com/:u:/g/personal/hitesh_nanjappa_upgrad_com/IQDSDNDZgOu9TKlfCiERmcA0ATdWfxhNHIs_RsPIq2GdS_s?e=jlSCKM
 
         with:
           api-level: 30
