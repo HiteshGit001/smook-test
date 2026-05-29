@@ -190,13 +190,13 @@ jobs:
           # IMPORTANT
           target: google_apis
 
-          arch: x86
+          arch: arm64-v8a
 
           profile: pixel_5
 
           force-avd-creation: true
 
-          emulator-boot-timeout: 1200
+          emulator-boot-timeout: 12000
 
           disable-animations: true
 
