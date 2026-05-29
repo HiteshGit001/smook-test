@@ -190,7 +190,7 @@ jobs:
 
         env:
           APP_NAME: chandigarh
-          APK_URL: https://firebasestorage.googleapis.com/v0/b/pedagogy-mobile.firebasestorage.app/o/apkss%2Fapp-Chandigarh-release.apk?alt=media&token=67620560-2765-48fc-9657-08498392dc4d
+          APK_URL: https://firebasestorage.googleapis.com/v0/b/pedagogy-mobile.firebasestorage.app/o/apkss%2Fapp-Chandigarh-release.apk?alt=media&token=0aa9eb81-115a-4c6f-b1fe-02a228c3b7fb
 
         with:
           api-level: 30
