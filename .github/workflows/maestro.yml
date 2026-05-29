@@ -66,17 +66,23 @@ jobs:
           cat > run_tests.sh << 'EOF'
           #!/bin/bash
 
-          set -e
+          set -eo pipefail
 
           mkdir -p debug-artifacts
 
           on_exit() {
+            echo "=== TAKING FINAL SCREENSHOT ==="
             adb exec-out screencap -p > debug-artifacts/on-exit.png || true
+
+            echo "=== SAVING LOGCAT ==="
+            adb logcat -d > debug-artifacts/logcat.txt || true
           }
 
           trap on_exit EXIT
 
-          echo "Waiting for emulator..."
+          echo "====================================="
+          echo "WAITING FOR EMULATOR"
+          echo "====================================="
 
           adb wait-for-device
 
@@ -88,29 +94,77 @@ jobs:
             sleep 5
           done
 
-          echo "Emulator boot completed"
+          echo "====================================="
+          echo "EMULATOR READY"
+          echo "====================================="
 
           adb devices
 
-          echo "Downloading APK..."
+          echo "====================================="
+          echo "DISABLING ANIMATIONS"
+          echo "====================================="
+
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+
+          echo "====================================="
+          echo "CLEARING LOGCAT"
+          echo "====================================="
+
+          adb logcat -c
+
+          echo "====================================="
+          echo "DOWNLOADING APK"
+          echo "====================================="
 
           wget -O app.apk "$APK_URL"
 
-          echo "Installing APK..."
+          ls -lh app.apk
+
+          echo "====================================="
+          echo "INSTALLING APK"
+          echo "====================================="
 
           adb install -r app.apk
 
-          echo "Launching app..."
+          echo "====================================="
+          echo "VERIFY PACKAGE"
+          echo "====================================="
+
+          adb shell pm list packages | grep cuonlineedu || true
+
+          echo "====================================="
+          echo "LAUNCHING APP"
+          echo "====================================="
 
           adb shell monkey -p in.cuonlineedu.lms -c android.intent.category.LAUNCHER 1
 
-          sleep 20
+          echo "====================================="
+          echo "WAITING AFTER APP LAUNCH"
+          echo "====================================="
+
+          sleep 25
+
+          echo "====================================="
+          echo "TAKING PRE-TEST SCREENSHOT"
+          echo "====================================="
 
           adb exec-out screencap -p > debug-artifacts/pre-test.png || true
 
-          echo "Running Maestro..."
+          echo "====================================="
+          echo "CHECKING FOR CRASH"
+          echo "====================================="
 
-          maestro test --debug-output debug-artifacts "apps/$APP_NAME/"
+          adb logcat -d | grep -i "FATAL EXCEPTION" && exit 1 || true
+
+          echo "====================================="
+          echo "RUNNING MAESTRO"
+          echo "====================================="
+
+          maestro test \
+            --debug-output debug-artifacts \
+            "apps/$APP_NAME/"
 
           EOF
 
@@ -128,9 +182,10 @@ jobs:
           APK_URL: https://github.com/HiteshGit001/smook-test/releases/download/ci-build-1318/app-chandigarh-release.apk
 
         with:
-          api-level: 30
+          api-level: 33
 
-          target: default
+          # IMPORTANT
+          target: google_apis
 
           arch: x86_64
 
@@ -144,7 +199,7 @@ jobs:
 
           emulator-options: >
             -no-window
-            -gpu off
+            -gpu swiftshader_indirect
             -noaudio
             -no-boot-anim
             -camera-back none
